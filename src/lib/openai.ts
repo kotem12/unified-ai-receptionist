@@ -3,13 +3,15 @@ import OpenAI from 'openai'
 let client: OpenAI | null = null
 
 export function getOpenAI() {
-  if (!process.env.OPENAI_API_KEY) {
-    throw new Error('OPENAI_API_KEY is missing')
-  }
-
   if (!client) {
+    const apiKey = process.env.OPENAI_API_KEY
+
+    if (!apiKey) {
+      throw new Error('OPENAI_API_KEY is missing')
+    }
+
     client = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+      apiKey,
     })
   }
 
