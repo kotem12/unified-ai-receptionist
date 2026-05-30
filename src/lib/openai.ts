@@ -1,19 +1,11 @@
 import OpenAI from 'openai'
 
-let client: OpenAI | null = null
-
 export function getOpenAI() {
-  if (!client) {
-    const apiKey = process.env.OPENAI_API_KEY
+  const apiKey = process.env.OPENAI_API_KEY
 
-    if (!apiKey) {
-      throw new Error('OPENAI_API_KEY is missing')
-    }
-
-    client = new OpenAI({
-      apiKey,
-    })
+  if (!apiKey) {
+    throw new Error('OPENAI_API_KEY is missing at runtime')
   }
 
-  return client
+  return new OpenAI({ apiKey })
 }
