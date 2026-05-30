@@ -65,7 +65,6 @@ Collect: destination, travel date, visa needs, budget
     let reply = ''
     let leadData: any = null
 
-    // Shared OpenAI client
     let openaiClient: ReturnType<typeof getOpenAI> | null = null
 
     try {
@@ -85,10 +84,7 @@ Collect: destination, travel date, visa needs, budget
       const aiResponse = await openaiClient.chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [
-          {
-            role: 'system',
-            content: systemPrompt,
-          },
+          { role: 'system', content: systemPrompt },
           {
             role: 'system',
             content:
@@ -134,11 +130,6 @@ Return ONLY valid JSON:
   "urgency": "low | medium | high",
   "stage": "new | qualified | hot"
 }
-
-Rules:
-- Output ONLY JSON
-- No explanation
-- Use null if missing
 `
             },
             {
@@ -160,6 +151,83 @@ Rules:
     } catch (err) {
       console.log('⚠️ Lead extraction failed')
     }
+
+// =========================
+// 🚀 A–G WOW FEATURES (SAFE ENHANCEMENT LAYER)
+// =========================
+if (leadData) {
+  let score = 0
+
+  // A - Lead scoring (ENRICH ONLY)
+  if (leadData.intent && leadData.intent !== 'unknown') score += 25
+  if (leadData.budget) score += 25
+  if (leadData.locations?.length) score += 20
+  if (leadData.urgency === 'high') score += 30
+
+  leadData.score = score
+
+  // B - Stage computation (DO NOT DESTROY ORIGINAL VALUE)
+  const computedStage =
+    score >= 70 ? 'hot' :
+    score >= 40 ? 'qualified' :
+    'new'
+
+  leadData.computed_stage = computedStage
+
+  // keep original stage intact if it exists
+  if (!leadData.stage) {
+    leadData.stage = computedStage
+  }
+
+  // C - Missing info detection
+  const missing: string[] = []
+
+  if (!leadData.budget) missing.push('budget')
+  if (!leadData.locations?.length) missing.push('location')
+  if (!leadData.timeline) missing.push('timeline')
+
+  leadData.missing_fields = missing
+
+  // D - Smart follow-up injection (ONLY APPEND)
+  if (missing.length > 0) {
+    reply += `\n\nQuick question: can you share your ${missing[0]}?`
+  }
+
+  // E - Hot lead boost (NO LOGIC CHANGE)
+  if (computedStage === 'hot') {
+    reply += `\n\n🔥 A specialist will contact you shortly.`
+  }
+
+  // F - Engagement tag
+  leadData.engagement =
+    score >= 70 ? 'high' :
+    score >= 40 ? 'medium' :
+    'low'
+
+  // G - n8n automation hook (SAFE + NON-BREAKING)
+  const n8nUrl = process.env.N8N_WEBHOOK_URL
+
+  if (n8nUrl && n8nUrl.startsWith('http')) {
+    try {
+      fetch(n8nUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: customerPhone,
+          message: incomingMessage,
+          reply,
+          leadData,
+          business: business.id,
+          timestamp: new Date().toISOString(),
+        }),
+      }).catch(() => {
+        // silent fail (non-blocking)
+      })
+    } catch {
+      // prevent runtime crash
+    }
+  }
+}
 
     // =========================
     // SAVE TO SUPABASE (FIXED)
