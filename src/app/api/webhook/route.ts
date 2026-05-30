@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getOpenAI } from '@/lib/openai'
+import { createOpenAI } from '@/lib/openai'
 import { supabase } from '@/lib/supabase'
 import twilio from 'twilio'
 
@@ -58,57 +58,41 @@ Collect: destination, travel date, visa needs, budget
               `User: ${h.customer_message}\nAssistant: ${h.ai_response}`
           )
           .join('\n') || ''
-    } catch (err) {
-      console.log('⚠️ Memory fetch failed, continuing without history')
+    } catch {
+      console.log('⚠️ Memory fetch failed')
     }
 
     let reply = ''
     let leadData: any = null
 
-    // Shared OpenAI client
-    let openaiClient: ReturnType<typeof getOpenAI> | null = null
-
-    try {
-      openaiClient = getOpenAI()
-    } catch (err) {
-      console.log('⚠️ OpenAI unavailable')
-    }
+    // =========================
+    // OPENAI CLIENT (SAFE)
+    // =========================
+    const openai = createOpenAI()
 
     // =========================
-    // AI LAYER
+    // AI RESPONSE
     // =========================
     try {
-      if (!openaiClient) {
-        throw new Error('OpenAI client unavailable')
-      }
-
-      const aiResponse = await openaiClient.chat.completions.create({
+      const aiResponse = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [
+          { role: 'system', content: systemPrompt },
           {
             role: 'system',
-            content: systemPrompt,
+            content: conversationHistory
+              ? `Conversation history:\n${conversationHistory}`
+              : 'No previous conversation history.',
           },
-          {
-            role: 'system',
-            content:
-              conversationHistory
-                ? `Conversation history:\n${conversationHistory}`
-                : 'No previous conversation history.',
-          },
-          {
-            role: 'user',
-            content: incomingMessage,
-          },
+          { role: 'user', content: incomingMessage },
         ],
       })
 
       reply =
         aiResponse.choices[0].message.content ||
         'Sorry, I could not generate a response.'
-    } catch (error) {
-      console.log('⚠️ OpenAI failed, switching to mock AI')
-
+    } catch (err) {
+      console.log('⚠️ AI failed, using fallback')
       reply = generateMockAI(incomingMessage)
     }
 
@@ -116,13 +100,12 @@ Collect: destination, travel date, visa needs, budget
     // CRM LEAD EXTRACTION
     // =========================
     try {
-      if (openaiClient) {
-        const extraction = await openaiClient.chat.completions.create({
-          model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'system',
-              content: `
+      const extraction = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: `
 You are a CRM lead extraction engine.
 
 Return ONLY valid JSON:
@@ -140,25 +123,20 @@ Rules:
 - Output ONLY JSON
 - No explanation
 - Use null if missing
-`
-            },
-            {
-              role: 'user',
-              content: incomingMessage,
-            },
-          ],
-        })
+`,
+          },
+          { role: 'user', content: incomingMessage },
+        ],
+      })
 
-        const text = extraction.choices[0].message.content || '{}'
+      const text = extraction.choices[0].message.content || '{}'
 
-        try {
-          leadData = JSON.parse(text)
-        } catch (err) {
-          console.log('⚠️ Failed to parse lead JSON')
-          leadData = null
-        }
+      try {
+        leadData = JSON.parse(text)
+      } catch {
+        leadData = null
       }
-    } catch (err) {
+    } catch {
       console.log('⚠️ Lead extraction failed')
     }
 

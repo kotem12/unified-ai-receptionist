@@ -1,6 +1,6 @@
 import OpenAI from 'openai'
 
-export function getOpenAI() {
+export function createOpenAI() {
   const apiKey = process.env.OPENAI_API_KEY
 
   if (!apiKey) {
