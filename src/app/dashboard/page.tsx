@@ -1,20 +1,36 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
-export default async function DashboardPage() {
-  const { data: conversations } = await supabase
-    .from('conversations')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(100)
+export default function DashboardPage() {
+  const [conversations, setConversations] = useState<any[]>([])
 
-  const [stageFilter, setStageFilter] = useState<'all' | 'hot' | 'qualified' | 'new'>('all')
-  const [intentFilter, setIntentFilter] = useState<'all' | 'rent' | 'logistics' | 'travel'>('all')
+  const [stageFilter, setStageFilter] =
+    useState<'all' | 'hot' | 'qualified' | 'new'>('all')
+
+  const [intentFilter, setIntentFilter] =
+    useState<'all' | 'rent' | 'logistics' | 'travel'>('all')
+
+  // =========================
+  // FETCH DATA CLIENT-SIDE
+  // =========================
+  useEffect(() => {
+    const fetchData = async () => {
+      const { data } = await supabase
+        .from('conversations')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100)
+
+      setConversations(data || [])
+    }
+
+    fetchData()
+  }, [])
 
   const filtered = useMemo(() => {
-    return (conversations || [])
+    return conversations
       .filter((c: any) => {
         const lead = c.lead_data || {}
 
@@ -26,7 +42,6 @@ export default async function DashboardPage() {
 
         return stageMatch && intentMatch
       })
-      // 🔥 HOT LEADS FIRST ALWAYS
       .sort((a: any, b: any) => {
         const aStage = a.lead_data?.stage
         const bStage = b.lead_data?.stage
@@ -47,12 +62,7 @@ export default async function DashboardPage() {
         Hot leads are prioritized automatically 🔥
       </p>
 
-      {/* =========================
-          FILTERS
-      ========================= */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
-
-        {/* Stage Filter */}
         <select
           value={stageFilter}
           onChange={(e) => setStageFilter(e.target.value as any)}
@@ -64,7 +74,6 @@ export default async function DashboardPage() {
           <option value="new">New</option>
         </select>
 
-        {/* Intent Filter */}
         <select
           value={intentFilter}
           onChange={(e) => setIntentFilter(e.target.value as any)}
@@ -76,7 +85,6 @@ export default async function DashboardPage() {
           <option value="travel">Travel</option>
         </select>
 
-        {/* Quick Reset */}
         <button
           onClick={() => {
             setStageFilter('all')
@@ -88,9 +96,6 @@ export default async function DashboardPage() {
         </button>
       </div>
 
-      {/* =========================
-          TABLE
-      ========================= */}
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr>
@@ -105,7 +110,7 @@ export default async function DashboardPage() {
         </thead>
 
         <tbody>
-          {filtered?.map((c: any) => {
+          {filtered.map((c: any) => {
             const lead = c.lead_data || {}
 
             return (
@@ -113,13 +118,11 @@ export default async function DashboardPage() {
                 <td style={td}>{c.customer_phone}</td>
                 <td style={td}>{c.customer_message}</td>
                 <td style={td}>{c.ai_response}</td>
-
                 <td style={td}>{lead.intent || '-'}</td>
                 <td style={td}>{lead.budget || '-'}</td>
                 <td style={td}>
                   {lead.locations?.join(', ') || '-'}
                 </td>
-
                 <td style={td}>
                   <span
                     style={{

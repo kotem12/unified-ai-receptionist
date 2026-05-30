@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { openai } from '@/lib/openai'
+import { getOpenAI } from '@/lib/openai'
 import { supabase } from '@/lib/supabase'
 import twilio from 'twilio'
 
@@ -38,7 +38,7 @@ Collect: destination, travel date, visa needs, budget
 `
 
     // =========================
-    // 🧠 MEMORY LAYER (UNCHANGED)
+    // 🧠 MEMORY LAYER
     // =========================
     let conversationHistory = ''
 
@@ -63,12 +63,26 @@ Collect: destination, travel date, visa needs, budget
     }
 
     let reply = ''
+    let leadData: any = null
+
+    // Shared OpenAI client
+    let openaiClient: ReturnType<typeof getOpenAI> | null = null
+
+    try {
+      openaiClient = getOpenAI()
+    } catch (err) {
+      console.log('⚠️ OpenAI unavailable')
+    }
 
     // =========================
-    // AI LAYER (UNCHANGED)
+    // AI LAYER
     // =========================
     try {
-      const aiResponse = await openai.chat.completions.create({
+      if (!openaiClient) {
+        throw new Error('OpenAI client unavailable')
+      }
+
+      const aiResponse = await openaiClient.chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [
           {
@@ -92,24 +106,23 @@ Collect: destination, travel date, visa needs, budget
       reply =
         aiResponse.choices[0].message.content ||
         'Sorry, I could not generate a response.'
-    } catch (error: any) {
+    } catch (error) {
       console.log('⚠️ OpenAI failed, switching to mock AI')
 
       reply = generateMockAI(incomingMessage)
     }
 
     // =========================
-    // 🧠 NEW: CRM LEAD EXTRACTION (ADDED)
+    // CRM LEAD EXTRACTION
     // =========================
-    let leadData: any = null
-
     try {
-      const extraction = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: `
+      if (openaiClient) {
+        const extraction = await openaiClient.chat.completions.create({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: `
 You are a CRM lead extraction engine.
 
 Return ONLY valid JSON:
@@ -128,39 +141,40 @@ Rules:
 - No explanation
 - Use null if missing
 `
-          },
-          {
-            role: 'user',
-            content: incomingMessage,
-          },
-        ],
-      })
+            },
+            {
+              role: 'user',
+              content: incomingMessage,
+            },
+          ],
+        })
 
-      const text = extraction.choices[0].message.content || '{}'
+        const text = extraction.choices[0].message.content || '{}'
 
-      try {
-        leadData = JSON.parse(text)
-      } catch (err) {
-        console.log('⚠️ Failed to parse lead JSON')
-        leadData = null
+        try {
+          leadData = JSON.parse(text)
+        } catch (err) {
+          console.log('⚠️ Failed to parse lead JSON')
+          leadData = null
+        }
       }
     } catch (err) {
       console.log('⚠️ Lead extraction failed')
     }
 
     // =========================
-    // SAVE TO SUPABASE (UPDATED ONLY ADDITION)
+    // SAVE TO SUPABASE
     // =========================
     await supabase.from('conversations').insert({
       business_id: business.id,
       customer_phone: customerPhone,
       customer_message: incomingMessage,
       ai_response: reply,
-      lead_data: leadData, // 👈 NEW FIELD ADDED
+      lead_data: leadData,
     })
 
     // =========================
-    // TWILIO RESPONSE (UNCHANGED)
+    // TWILIO RESPONSE
     // =========================
     const twiml = new twilio.twiml.MessagingResponse()
     twiml.message(reply)
@@ -181,12 +195,16 @@ Rules:
 }
 
 // =========================
-// MOCK AI FALLBACK ENGINE (UNCHANGED)
+// MOCK AI FALLBACK ENGINE
 // =========================
 function generateMockAI(message: string) {
   const msg = message.toLowerCase()
 
-  if (msg.includes('apartment') || msg.includes('house') || msg.includes('rent')) {
+  if (
+    msg.includes('apartment') ||
+    msg.includes('house') ||
+    msg.includes('rent')
+  ) {
     return 'Got it 👍 What is your budget and preferred location?'
   }
 
@@ -199,7 +217,11 @@ function generateMockAI(message: string) {
     return 'Please share pickup location, destination, and package details.'
   }
 
-  if (msg.includes('travel') || msg.includes('flight') || msg.includes('visa')) {
+  if (
+    msg.includes('travel') ||
+    msg.includes('flight') ||
+    msg.includes('visa')
+  ) {
     return 'Where are you traveling to and what are your preferred dates?'
   }
 
