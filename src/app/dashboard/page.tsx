@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { getSupabase } from '@/lib/supabase'
 
 export default function DashboardPage() {
   const [conversations, setConversations] = useState<any[]>([])
@@ -17,6 +17,7 @@ export default function DashboardPage() {
   // =========================
   useEffect(() => {
     const fetchData = async () => {
+      const supabase = getSupabase()
       const { data } = await supabase
         .from('conversations')
         .select('*')
