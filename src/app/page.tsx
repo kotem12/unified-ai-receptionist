@@ -1,165 +1,236 @@
-import Link from 'next/link'
-import React from 'react'
+import React from 'react';
+import { motion } from 'framer-motion';
 
-export default function HomePage() {
+export default function LandingPage() {
   return (
     <div style={container}>
+      {/* FLOATING BLOBS */}
+      <div style={blob1}></div>
+      <div style={blob2}></div>
+      <div style={blob3}></div>
+
       {/* HERO */}
-      <div style={hero}>
-        <h1 style={title}>
+      <motion.div
+        style={hero}
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 1 }}
+      >
+        <motion.h1
+          style={title}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
           AI WhatsApp Receptionist for Businesses
-        </h1>
-
+        </motion.h1>
         <p style={subtitle}>
-          Automatically replies to customers, qualifies leads, and sends you
-          structured sales-ready data — 24/7.
+          Automatically reply to customers, qualify leads, and get structured
+          sales-ready data — 24/7.
         </p>
-
-        <a
+        <motion.a
           href="https://wa.me/2349069363183?text=Hi%20I%20want%20a%20demo"
           target="_blank"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           style={cta}
         >
-          Try Live Demo on WhatsApp
-        </a>
+          Try Live Demo →
+        </motion.a>
+      </motion.div>
 
-        <p style={smallText}>
-          (Click above to test how your customers will interact with your AI receptionist)
-        </p>
-      </div>
-
-      {/* HOW IT WORKS */}
-      <div style={section}>
-        <h2>How it works</h2>
-
-        <ol>
-          <li>Customer sends WhatsApp message</li>
-          <li>AI replies instantly like a receptionist</li>
-          <li>System extracts lead details automatically</li>
-          <li>You see everything in your CRM dashboard</li>
-        </ol>
-      </div>
+      {/* FEATURES */}
+      <Section title="How it Works">
+        <div style={grid}>
+          {[
+            'Customer sends WhatsApp message',
+            'AI replies instantly like a receptionist',
+            'System extracts lead details automatically',
+            'You see everything in your CRM dashboard',
+          ].map((text, i) => (
+            <Card key={i} text={text} />
+          ))}
+        </div>
+      </Section>
 
       {/* INDUSTRIES */}
-      <div style={section}>
-        <h2>Works for any business that gets messages</h2>
-
+      <Section title="Works for Any Business That Gets Messages">
         <div style={grid}>
-          <div style={card}>
-            <h3>🏠 Real Estate</h3>
-            <p>Capture buyers & renters automatically</p>
-          </div>
-
-          <div style={card}>
-            <h3>🚚 Logistics</h3>
-            <p>Track deliveries and customer requests</p>
-          </div>
-
-          <div style={card}>
-            <h3>✈️ Travel Agencies</h3>
-            <p>Collect destinations, budgets, and dates</p>
-          </div>
+          <Card title="🏠 Real Estate" text="Capture buyers & renters automatically" />
+          <Card title="🚚 Logistics" text="Track deliveries & requests" />
+          <Card title="✈️ Travel Agencies" text="Collect destinations, budgets, dates" />
         </div>
-      </div>
+      </Section>
 
-      {/* DEMO OUTPUT */}
-      <div style={section}>
-        <h2>Example of what your business gets</h2>
-
-        <pre style={codeBox}>
+      {/* EXAMPLE OUTPUT */}
+      <Section title="Example AI Output">
+        <motion.pre
+          style={codeBox}
+          whileHover={{
+            scale: 1.02,
+            boxShadow: '0 0 40px rgba(37, 211, 102, 0.3)',
+          }}
+        >
 {`Lead:
 - Intent: Rent
 - Budget: $1000
 - Locations: Lekki, Ikoyi
 - Stage: Qualified`}
-        </pre>
-      </div>
+        </motion.pre>
+      </Section>
 
-      {/* CTA */}
-      <div style={finalCta}>
-        <h2>Stop missing customer messages</h2>
-        <p>Start converting WhatsApp chats into paying customers automatically.</p>
+      {/* PRICING */}
+      <Section title="Pricing Plans">
+        <div style={pricingGrid}>
+          <PricingCard tier="Starter" price="$29/mo" features={['100 Leads / month', 'Basic CRM']} />
+          <PricingCard
+            tier="Pro"
+            price="$79/mo"
+            features={['1000 Leads / month', 'Advanced CRM', 'Priority Support']}
+            recommended
+          />
+          <PricingCard tier="Enterprise" price="Custom" features={['Unlimited Leads', 'Full Automation', 'Dedicated Account Manager']} />
+        </div>
+      </Section>
 
-        <a
+      {/* TESTIMONIALS */}
+      <Section title="What Our Customers Say">
+        <div style={grid}>
+          <Testimonial name="Jane D." company="Real Estate Co." text="AI Receptionist boosted our leads by 300%!" />
+          <Testimonial name="Ahmed K." company="Logistics Ltd." text="Our customer response time went from hours to seconds." />
+          <Testimonial name="Sophia L." company="Travel Agency" text="We finally manage leads without hiring extra staff." />
+        </div>
+      </Section>
+
+      {/* FINAL CTA */}
+      <motion.div
+        style={finalCta}
+        whileHover={{ boxShadow: '0 0 60px rgba(37, 211, 102, 0.4)', scale: 1.01 }}
+      >
+        <h2 style={titleSmall}>Stop Missing Messages</h2>
+        <p style={{ opacity: 0.9 }}>Convert WhatsApp chats into paying customers automatically.</p>
+        <motion.a
           href="https://wa.me/2349069363183?text=I%20want%20this%20for%20my%20business"
           target="_blank"
+          whileHover={{ scale: 1.08, background: 'linear-gradient(135deg,#25D366,#128C7E,#00ff9d)' }}
+          whileTap={{ scale: 0.95 }}
           style={cta}
         >
-          Get This for My Business
-        </a>
-      </div>
+          Get This for My Business →
+        </motion.a>
+      </motion.div>
     </div>
-  )
+  );
 }
 
-const container = {
-  fontFamily: 'Arial',
-  padding: 20,
-  maxWidth: 900,
+/* ================= COMPONENTS ================= */
+
+function Section({ title, children }: any) {
+  return (
+    <motion.div
+      style={section}
+      initial={{ opacity: 0, y: 40 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.6 }}
+    >
+      <h2 style={sectionTitle}>{title}</h2>
+      {children}
+    </motion.div>
+  );
+}
+
+function Card({ title, text }: any) {
+  return (
+    <motion.div
+      style={card}
+      whileHover={{
+        y: -8,
+        scale: 1.02,
+        boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+      }}
+      transition={{ type: 'spring', stiffness: 200 }}
+    >
+      {title && <h3>{title}</h3>}
+      <p>{text}</p>
+    </motion.div>
+  );
+}
+
+function PricingCard({ tier, price, features, recommended }: any) {
+  return (
+    <motion.div
+      style={{
+        ...pricingCard,
+        border: recommended ? '2px solid #25D366' : pricingCard.border,
+        scale: recommended ? 1.05 : 1,
+      }}
+      whileHover={{ scale: 1.07, boxShadow: '0 25px 50px rgba(0,255,150,0.2)' }}
+    >
+      {recommended && <div style={recommendedBadge}>Recommended</div>}
+      <h3>{tier}</h3>
+      <p style={{ fontSize: 28, fontWeight: 700 }}>{price}</p>
+      <ul style={{ textAlign: 'left', marginTop: 10 }}>
+        {features.map((f: string, i: number) => (
+          <li key={i}>{f}</li>
+        ))}
+      </ul>
+      <motion.a
+        href="https://wa.me/2349069363183?text=I%20want%20this%20for%20my%20business"
+        target="_blank"
+        whileHover={{ scale: 1.05 }}
+        style={cta}
+      >
+        Choose Plan
+      </motion.a>
+    </motion.div>
+  );
+}
+
+function Testimonial({ name, company, text }: any) {
+  return (
+    <motion.div
+      style={testimonialCard}
+      whileHover={{ y: -5, scale: 1.02, boxShadow: '0 15px 40px rgba(0,0,0,0.15)' }}
+    >
+      <p>"{text}"</p>
+      <p style={{ fontWeight: 700, marginTop: 10 }}>
+        {name} — {company}
+      </p>
+    </motion.div>
+  );
+}
+
+/* ================= STYLES ================= */
+
+const container: React.CSSProperties = {
+  fontFamily: 'Inter, sans-serif',
+  padding: '40px 20px',
+  maxWidth: 1200,
   margin: '0 auto',
-}
-
-const hero = {
-  textAlign: 'center' as const,
-  padding: '60px 20px',
-}
-
-const title = {
-  fontSize: 42,
-  fontWeight: 'bold',
-}
-
-const subtitle = {
-  fontSize: 18,
-  color: '#555',
-  marginTop: 10,
-  marginBottom: 30,
-}
-
-const cta = {
-  display: 'inline-block',
-  padding: '12px 20px',
-  background: '#25D366',
+  position: 'relative',
+  overflow: 'hidden',
+  background: '#0b0f14',
   color: 'white',
-  borderRadius: 8,
-  textDecoration: 'none',
-  fontWeight: 'bold',
-}
+};
 
-const smallText = {
-  fontSize: 12,
-  color: '#888',
-  marginTop: 10,
-}
-
-const section = {
-  marginTop: 50,
-}
-
-const grid = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(3, 1fr)',
-  gap: 15,
-}
-
-const card = {
-  padding: 15,
-  border: '1px solid #eee',
-  borderRadius: 10,
-}
-
-const codeBox: React.CSSProperties = {
-  background: '#111',
-  color: '#0f0',
-  padding: 15,
-  borderRadius: 8,
-  overflowX: 'auto',
-}
-
-const finalCta = {
-  marginTop: 60,
-  textAlign: 'center' as const,
-  padding: 30,
-  background: '#f5f5f5',
-  borderRadius: 10,
-}
+/* FLOATING BLOBS */
+const blob1: React.CSSProperties = {
+  position: 'absolute',
+  width: 300,
+  height: 300,
+  background: 'rgba(37, 211, 102, 0.25)',
+  filter: 'blur(80px)',
+  borderRadius: '50%',
+  top: '10%',
+  left: '5%',
+  animation: 'float 8s ease-in-out infinite',
+};
+const blob2: React.CSSProperties = {
+  position: 'absolute',
+  width: 250,
+  height: 250,
+  background: 'rgba(0, 255, 170, 0.2)',
+  filter: 'blur(90px)',
+  borderRadius: '50%',
+  bottom: '10%',
