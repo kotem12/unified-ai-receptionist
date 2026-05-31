@@ -16,7 +16,7 @@ export default function HomePage() {
         </p>
 
         <a
-          href="https://wa.me/2340000000000?text=Hi%20I%20want%20a%20demo"
+          href="https://wa.me/2349069363183?text=Hi%20I%20want%20a%20demo"
           target="_blank"
           style={cta}
         >
@@ -81,7 +81,7 @@ export default function HomePage() {
         <p>Start converting WhatsApp chats into paying customers automatically.</p>
 
         <a
-          href="https://wa.me/2340000000000?text=I%20want%20this%20for%20my%20business"
+          href="https://wa.me/2349069363183?text=I%20want%20this%20for%20my%20business"
           target="_blank"
           style={cta}
         >
