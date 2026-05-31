@@ -25,8 +25,7 @@ export default function LandingPage() {
           AI WhatsApp Receptionist for Businesses
         </motion.h1>
         <p style={subtitle}>
-          Automatically reply to customers, qualify leads, and get structured
-          sales-ready data — 24/7.
+          Automatically reply to customers, qualify leads, and get structured sales-ready data — 24/7.
         </p>
         <motion.a
           href="https://wa.me/2349069363183?text=Hi%20I%20want%20a%20demo"
@@ -234,3 +233,144 @@ const blob2: React.CSSProperties = {
   filter: 'blur(90px)',
   borderRadius: '50%',
   bottom: '10%',
+  right: '10%',
+  animation: 'float 10s ease-in-out infinite',
+};
+const blob3: React.CSSProperties = {
+  position: 'absolute',
+  width: 200,
+  height: 200,
+  background: 'rgba(18, 140, 126, 0.25)',
+  filter: 'blur(70px)',
+  borderRadius: '50%',
+  top: '50%',
+  right: '20%',
+  animation: 'float 12s ease-in-out infinite',
+};
+
+/* HERO */
+const hero: React.CSSProperties = {
+  textAlign: 'center',
+  padding: '80px 20px',
+};
+const title: React.CSSProperties = {
+  fontSize: 42,
+  fontWeight: 'bold',
+  background: 'linear-gradient(90deg,#25D366,#128C7E)',
+  WebkitBackgroundClip: 'text',
+  color: 'transparent',
+};
+const subtitle: React.CSSProperties = {
+  fontSize: 18,
+  color: '#ccc',
+  marginTop: 10,
+  marginBottom: 30,
+};
+const cta: React.CSSProperties = {
+  display: 'inline-block',
+  padding: '12px 20px',
+  background: '#25D366',
+  color: 'white',
+  borderRadius: 8,
+  textDecoration: 'none',
+  fontWeight: 'bold',
+  transition: 'all 0.3s ease',
+};
+
+/* SECTION */
+const section: React.CSSProperties = {
+  marginTop: 50,
+};
+const sectionTitle: React.CSSProperties = {
+  fontSize: 32,
+  fontWeight: 'bold',
+  textAlign: 'center',
+  marginBottom: 30,
+};
+
+/* GRID */
+const grid: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+  gap: 20,
+};
+
+/* CARDS */
+const card: React.CSSProperties = {
+  padding: 20,
+  borderRadius: 12,
+  background: 'rgba(255,255,255,0.05)',
+  backdropFilter: 'blur(10px)',
+  textAlign: 'center',
+};
+
+/* CODE BOX */
+const codeBox: React.CSSProperties = {
+  background: '#111',
+  color: '#0f0',
+  padding: 20,
+  borderRadius: 12,
+  overflowX: 'auto',
+  fontFamily: 'monospace',
+  margin: '0 auto',
+  maxWidth: 600,
+};
+
+/* PRICING */
+const pricingGrid: React.CSSProperties = {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+  gap: 20,
+};
+const pricingCard: React.CSSProperties = {
+  padding: 20,
+  borderRadius: 12,
+  background: 'rgba(255,255,255,0.05)',
+  textAlign: 'center',
+  border: '1px solid #eee',
+};
+const recommendedBadge: React.CSSProperties = {
+  position: 'absolute',
+  top: -10,
+  right: -10,
+  background: '#25D366',
+  color: 'white',
+  padding: '5px 10px',
+  borderRadius: 12,
+  fontSize: 12,
+  fontWeight: 'bold',
+};
+
+/* TESTIMONIAL */
+const testimonialCard: React.CSSProperties = {
+  padding: 20,
+  borderRadius: 12,
+  background: 'rgba(255,255,255,0.05)',
+  textAlign: 'center',
+};
+
+/* FINAL CTA */
+const finalCta: React.CSSProperties = {
+  marginTop: 60,
+  textAlign: 'center',
+  padding: 40,
+  background: '#111',
+  borderRadius: 12,
+};
+const titleSmall: React.CSSProperties = {
+  fontSize: 28,
+  fontWeight: 'bold',
+};
+
+/* FLOAT ANIMATION */
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.innerHTML = `
+    @keyframes float {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-20px); }
+      100% { transform: translateY(0px); }
+    }
+  `;
+  document.head.appendChild(style);
+}
