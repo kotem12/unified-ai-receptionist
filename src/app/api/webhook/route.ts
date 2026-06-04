@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getOpenAI } from '@/lib/openai'
+import { getGemini } from '@/lib/gemini'
 import { getSupabase } from '@/lib/supabase'
 import twilio from 'twilio'
 
@@ -7,14 +8,33 @@ export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData()
 
+    console.log('FROM:', formData.get('From'))
+    console.log('TO:', formData.get('To'))
+
     const incomingMessage = formData.get('Body')?.toString() || ''
     const customerPhone = formData.get('From')?.toString() || ''
+    const businessPhone = formData.get('To')?.toString() || ''
 
-    const business = {
-      id: 'demo-business',
-      niche: 'real_estate',
-      name: 'Demo Business',
-    }
+    const supabase = getSupabase()
+
+// =========================
+// 🔍 FETCH BUSINESS DYNAMICALLY
+// =========================
+const { data: businessData, error: businessError } = await supabase
+  .from('businesses')
+  .select('*')
+  .eq('whatsapp_number', businessPhone)
+  .single()
+
+if (businessError || !businessData) {
+  console.log('⚠️ Business not found for phone:', businessPhone)
+  return NextResponse.json(
+    { error: 'Business not registered for this number' },
+    { status: 400 }
+  )
+}
+
+const business: any = businessData
 
     const systemPrompt = `
 You are a professional WhatsApp receptionist for a ${business.niche} business.
@@ -40,7 +60,6 @@ Collect: destination, travel date, visa needs, budget
     // =========================
     // 🧠 MEMORY LAYER
     // =========================
-    const supabase = getSupabase()
     let conversationHistory = ''
 
     try {
@@ -73,39 +92,78 @@ Collect: destination, travel date, visa needs, budget
       console.log('⚠️ OpenAI unavailable')
     }
 
-    // =========================
-    // AI LAYER
-    // =========================
-    try {
-      if (!openaiClient) {
-        throw new Error('OpenAI client unavailable')
-      }
+// =========================
+// AI LAYER
+// =========================
+reply = '' // reset to ensure a clean slate
 
-      const aiResponse = await openaiClient.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          {
-            role: 'system',
-            content:
-              conversationHistory
-                ? `Conversation history:\n${conversationHistory}`
-                : 'No previous conversation history.',
-          },
-          {
-            role: 'user',
-            content: incomingMessage,
-          },
-        ],
-      })
+try {
+  if (!openaiClient) {
+    throw new Error('OpenAI client unavailable')
+  }
 
-      reply =
-        aiResponse.choices[0].message.content ||
-        'Sorry, I could not generate a response.'
-    } catch (error) {
-      console.log('⚠️ OpenAI failed, switching to mock AI')
-      reply = generateMockAI(incomingMessage)
-    }
+  const aiResponse = await openaiClient.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      {
+        role: 'system',
+        content:
+          conversationHistory
+            ? `Conversation history:\n${conversationHistory}`
+            : 'No previous conversation history.',
+      },
+      {
+        role: 'user',
+        content: incomingMessage,
+      },
+    ],
+  })
+
+  reply =
+    aiResponse.choices[0].message.content || ''
+
+} catch (openAiError) {
+
+  console.log('⚠️ OpenAI failed, trying Gemini')
+
+  try {
+    const gemini = getGemini()
+
+    const model = gemini.getGenerativeModel({
+      model: 'gemini-1.5-flash',
+    })
+
+    const result = await model.generateContent(`
+${systemPrompt}
+
+Conversation History:
+${conversationHistory}
+
+Customer:
+${incomingMessage}
+`)
+
+    reply =
+      result.response.text() || ''
+
+    console.log('✅ Gemini fallback used')
+
+  } catch (geminiError) {
+
+    console.error('❌ Gemini Error:', geminiError)
+
+  }
+}
+if (!reply) {
+
+  console.log('⚠️ Both OpenAI and Gemini failed, switching to mock AI')
+
+  reply = generateMockAI(incomingMessage)
+
+}
+
+console.log('FINAL REPLY:', reply)
 
     // =========================
     // CRM LEAD EXTRACTION
@@ -144,13 +202,60 @@ Return ONLY valid JSON:
         try {
           leadData = JSON.parse(text)
         } catch (err) {
-          console.log('⚠️ Failed to parse lead JSON')
+          console.error('❌ Failed to parse lead JSON:', err)
           leadData = null
         }
       }
     } catch (err) {
-      console.log('⚠️ Lead extraction failed')
+      console.error('❌ Lead Extraction Error:', err)
     }
+
+// =========================
+// FALLBACK LEAD EXTRACTION
+// =========================
+if (!leadData) {
+
+  const msg = incomingMessage.toLowerCase()
+
+  leadData = {
+    intent: 'unknown',
+    budget: null,
+    locations: [],
+    timeline: null,
+    urgency: 'low',
+    stage: 'new',
+  }
+
+  if (
+    msg.includes('rent') ||
+    msg.includes('apartment') ||
+    msg.includes('house')
+  ) {
+    leadData.intent = 'rent'
+  }
+
+  if (msg.includes('buy')) {
+    leadData.intent = 'buy'
+  }
+
+  if (
+    msg.includes('delivery') ||
+    msg.includes('logistics') ||
+    msg.includes('pickup')
+  ) {
+    leadData.intent = 'logistics'
+  }
+
+  if (
+    msg.includes('travel') ||
+    msg.includes('flight') ||
+    msg.includes('visa')
+  ) {
+    leadData.intent = 'travel'
+  }
+
+  console.log('✅ Rule-based lead extraction used')
+}
 
 // =========================
 // 🚀 A–G WOW FEATURES (SAFE ENHANCEMENT LAYER)
@@ -242,11 +347,30 @@ if (leadData) {
         lead_data: leadData,
       } as any)
 
+    if (leadData) {
+      await supabase
+        .from('leads')
+        .insert({
+         business_id: business.id,
+         customer_phone: customerPhone,
+         intent: leadData.intent,
+         budget: leadData.budget,
+         locations: leadData.locations,
+         timeline: leadData.timeline,
+         urgency: leadData.urgency,
+         stage: leadData.stage,
+         score: leadData.score,
+         lead_data: leadData,
+        } as any)
+    }
+
     // =========================
     // TWILIO RESPONSE
     // =========================
     const twiml = new twilio.twiml.MessagingResponse()
+    console.log('SENDING TWILIO MESSAGE:', reply)
     twiml.message(reply)
+    console.log('TWIML XML:', twiml.toString())
 
     return new NextResponse(twiml.toString(), {
       headers: {

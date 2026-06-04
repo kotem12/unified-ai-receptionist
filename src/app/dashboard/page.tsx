@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { getSupabase } from '@/lib/supabase'
+import { getSupabaseBrowser } from '@/lib/supabase-browser'
 
 export default function DashboardPage() {
   const [conversations, setConversations] = useState<any[]>([])
@@ -17,12 +17,16 @@ export default function DashboardPage() {
   // =========================
   useEffect(() => {
     const fetchData = async () => {
-      const supabase = getSupabase()
-      const { data } = await supabase
+      const supabase = getSupabaseBrowser()
+      const { data, error } = await supabase
         .from('conversations')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(100)
+
+      console.log('Dashboard data:', data)
+      console.log('Dashboard rows:', data?.length)
+      console.log('Dashboard error:', error)
 
       setConversations(data || [])
     }
