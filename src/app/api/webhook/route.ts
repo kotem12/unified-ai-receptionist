@@ -36,7 +36,10 @@ if (businessError || !businessData) {
 
 const business: any = businessData
 
-    const systemPrompt = `
+    const systemPrompt = 
+      business.ai_prompt?.trim()
+        ? business.ai_prompt
+        :`
 You are a professional WhatsApp receptionist for a ${business.niche} business.
 
 Your job:
@@ -67,6 +70,7 @@ Collect: destination, travel date, visa needs, budget
         .from('conversations')
         .select('customer_message, ai_response')
         .eq('customer_phone', customerPhone)
+        .eq('business_id', business.id)
         .order('created_at', { ascending: false })
         .limit(5)
 

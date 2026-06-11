@@ -1,9 +1,11 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { getSupabaseBrowser } from '@/lib/supabase-browser'
 
 export default function DashboardPage() {
+  const router = useRouter()
   const [conversations, setConversations] = useState<any[]>([])
 
   const [stageFilter, setStageFilter] =
@@ -18,12 +20,39 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchData = async () => {
       const supabase = getSupabaseBrowser()
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) {
+        router.push('/login')
+        return
+      }
+
+      const { data: business } = await supabase
+        .from('businesses')
+        .select('*')
+        .eq('user_id', user.id)
+        .single()
+
+      if (!business) {
+        router.push('/onboarding')
+        return
+      }
+
+      const currentBusiness = business as any
+
+      console.log('Business:', business)
+
       const { data, error } = await supabase
         .from('conversations')
         .select('*')
+        .eq('business_id', currentBusiness.id)
         .order('created_at', { ascending: false })
         .limit(100)
 
+      console.log('Current business ID:', currentBusiness.id)
       console.log('Dashboard data:', data)
       console.log('Dashboard rows:', data?.length)
       console.log('Dashboard error:', error)
@@ -91,6 +120,13 @@ export default function DashboardPage() {
         </select>
 
         <button
+          onClick={() => router.push('/settings')}
+          style={buttonStyle}
+        >
+          Settings
+        </button>
+
+        <button
           onClick={() => {
             setStageFilter('all')
             setIntentFilter('all')
@@ -119,7 +155,19 @@ export default function DashboardPage() {
             const lead = c.lead_data || {}
 
             return (
-              <tr key={c.id}>
+              <tr 
+                key={c.id}
+                onClick={() =>
+                  router.push(
+                    `/dashboard/lead/${encodeURIComponent(
+                      c.customer_phone
+                    )}`
+                  )
+                }
+                style={{ 
+                  cursor: 'pointer',
+                  }}
+              >  
                 <td style={td}>{c.customer_phone}</td>
                 <td style={td}>{c.customer_message}</td>
                 <td style={td}>{c.ai_response}</td>
