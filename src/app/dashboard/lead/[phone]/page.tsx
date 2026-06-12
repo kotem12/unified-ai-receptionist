@@ -19,6 +19,8 @@ export default function LeadDetailsPage() {
   const [taskDueDate, setTaskDueDate] = useState('')
   const [appointmentDate, setAppointmentDate] = useState('')
   const [stage, setStage] = useState('')
+  const [notes, setNotes] = useState<any[]>([])
+  const [newNote, setNewNote] = useState('')
 
   useEffect(() => {
     loadLead()
@@ -86,6 +88,16 @@ export default function LeadDetailsPage() {
         ascending: false, })
 
     setTasks(taskData || [])
+
+    const { data: noteData } = await (supabase as any)
+      .from('lead_notes')
+      .select('*')
+      .eq('lead_id', leadData.id)
+      .order('created_at', {
+        ascending: false,
+      })
+
+    setNotes(noteData || [])
   }
 
   async function scheduleAppointment() {
@@ -165,6 +177,27 @@ export default function LeadDetailsPage() {
     if (!error) {
       setNewTask('')
       setTaskDueDate('')
+      loadLead()
+    }
+  }
+
+  async function createNote() {
+    if (!newNote.trim()) return
+
+    const supabase = getSupabaseBrowser()
+
+    const { error } = await (supabase as any)
+      .from('lead_notes')
+      .insert({
+        business_id: lead.business_id,
+        lead_id: lead.id,
+        note: newNote,
+      })
+
+    console.log(error)
+
+    if (!error) {
+      setNewNote('')
       loadLead()
     }
   }
@@ -389,6 +422,45 @@ export default function LeadDetailsPage() {
               ? 'Mark as Incomplete'
               : 'Mark as Completed'}
           </button>
+        </div>
+      ))}
+
+      <h2>Internal Notes</h2>
+
+      <div style={card}>
+        <textarea
+          value={newNote}
+          onChange={(e) =>
+            setNewNote(e.target.value)
+          }
+          placeholder="Add internal note about this lead..."
+          style={{
+            padding: 10,
+            width: '100%',
+            minHeight: 100,
+            marginBottom: 10,
+          }}
+        />
+
+        <button
+          onClick={createNote}
+        >
+          Save Note
+        </button>
+      </div>
+
+      {notes.map((note) => (
+        <div 
+          key={note.id} 
+          style={card}
+        >
+          <p>{note.note}</p>
+
+          <small>
+            {new Date(
+              note.created_at
+            ).toLocaleString()}
+          </small>
         </div>
       ))}
 

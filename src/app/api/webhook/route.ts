@@ -127,6 +127,15 @@ try {
   reply =
     aiResponse.choices[0].message.content || ''
 
+  await logAIUsage(
+    supabase, 
+    business.id, 
+    'openai', 
+    'gpt-4o-mini', 
+    aiResponse.usage?.prompt_tokens || 0, 
+    aiResponse.usage?.completion_tokens || 0
+  )
+
 } catch (openAiError) {
 
   console.log('⚠️ OpenAI failed, trying Gemini')
@@ -153,6 +162,15 @@ ${incomingMessage}
 
     console.log('✅ Gemini fallback used')
 
+    await logAIUsage(
+      supabase,
+      business.id,
+      'gemini',
+      'gemini-1.5-flash',
+      0,
+      0
+    )
+
   } catch (geminiError) {
 
     console.error('❌ Gemini Error:', geminiError)
@@ -165,7 +183,16 @@ if (!reply) {
 
   reply = generateMockAI(incomingMessage)
 
+  await logAIUsage(
+    supabase,
+    business.id,
+    'mock-ai',
+    'fallback',
+    0,
+    0
+  )
 }
+
 
 console.log('FINAL REPLY:', reply)
 
@@ -205,6 +232,16 @@ Return ONLY valid JSON:
 
         try {
           leadData = JSON.parse(text)
+
+          await logAIUsage(
+            supabase, 
+            business.id, 
+            'openai', 
+            'gpt-4o-mini (extraction)', 
+            extraction.usage?.prompt_tokens || 0, 
+            extraction.usage?.completion_tokens || 0
+          )
+          
         } catch (err) {
           console.error('❌ Failed to parse lead JSON:', err)
           leadData = null
@@ -394,6 +431,30 @@ if (leadData) {
 // =========================
 // MOCK AI FALLBACK ENGINE
 // =========================
+
+async function logAIUsage(
+  supabase: any,
+  businessId: string,
+  provider: string,
+  model: string,
+  inputTokens = 0,
+  outputTokens = 0
+) {
+  try {
+    await supabase
+      .from('ai_usage')
+      .insert({
+        business_id: businessId,
+        provider,
+        model,
+        input_tokens: inputTokens,
+        output_tokens: outputTokens,
+      } as any)
+  } catch (err) {
+    console.log('AI usage logging failed')
+  }
+}
+
 function generateMockAI(message: string) {
   const msg = message.toLowerCase()
 

@@ -222,6 +222,24 @@ export default function DashboardPage() {
         </button>
 
         <button
+          onClick={() => 
+            router.push('/dashboard/pipeline')
+          }
+          style={buttonStyle}
+        >
+          Pipeline View
+        </button>
+
+        <button
+          onClick={() => 
+            router.push('/dashboard/analytics')
+          }
+          style={buttonStyle}
+        >
+          Analytics View
+        </button>
+
+        <button
           onClick={() => {
             setStageFilter('all')
             setIntentFilter('all')
