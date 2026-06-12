@@ -9,10 +9,26 @@ export default function DashboardPage() {
   const [conversations, setConversations] = useState<any[]>([])
 
   const [stageFilter, setStageFilter] =
-    useState<'all' | 'hot' | 'qualified' | 'new'>('all')
+    useState<
+      | 'all' 
+      | 'hot' 
+      | 'qualified' 
+      | 'new'
+      | 'appointment'
+      | 'lost'
+      | 'won'
+    >('all')
 
   const [intentFilter, setIntentFilter] =
     useState<'all' | 'rent' | 'logistics' | 'travel'>('all')
+
+  const [analytics, setAnalytics] = useState({
+    totalLeads: 0,
+    hotLeads: 0,
+    appointments: 0,
+    wonDeals: 0,
+    conversionRate: 0,
+  })
 
   // =========================
   // FETCH DATA CLIENT-SIDE
@@ -44,6 +60,43 @@ export default function DashboardPage() {
       const currentBusiness = business as any
 
       console.log('Business:', business)
+
+      const { data: leads } = await (supabase as any)
+        .from('leads')
+        .select('*')
+        .eq('business_id', currentBusiness.id)
+
+      const totalLeads = leads?.length || 0
+
+      const hotLeads = 
+        leads?.filter(
+          (l: any) => l.stage === 'hot'
+        ).length || 0
+
+      const appointments =
+        leads?.filter(
+          (l: any) => l.stage === 'appointment'
+        ).length || 0
+
+      const wonDeals =
+        leads?.filter(
+          (l: any) => l.stage === 'won'
+        ).length || 0
+
+      const conversionRate =
+        totalLeads === 0
+          ? 0
+          : Math.round(
+              (wonDeals / totalLeads) * 100
+            )
+
+      setAnalytics({
+        totalLeads,
+        hotLeads,
+        appointments,
+        wonDeals,
+        conversionRate,
+      })
 
       const { data, error } = await supabase
         .from('conversations')
@@ -92,6 +145,45 @@ export default function DashboardPage() {
         AI Receptionist CRM
       </h1>
 
+      <div 
+        style={{ 
+          display: 'grid', 
+          gap: 12, 
+          marginBottom: 20,
+          marginTop: 20,
+          gridTemplateColumns: 
+            'repeat(auto-fit, minmax(150px, 1fr))',
+        }}
+      >
+
+        <div style={metriccard}>
+          <h3>Total Leads</h3>
+          <h1>{analytics.totalLeads}</h1>
+        </div>
+
+        <div style={metriccard}>
+          <h3>Hot Leads</h3>
+          <h1>{analytics.hotLeads}</h1>
+        </div>
+
+        <div style={metriccard}>
+          <h3>Appointments</h3>
+          <h1>{analytics.appointments}</h1>
+        </div>
+
+        <div style={metriccard}>
+          <h3>Won Deals</h3>
+          <h1>{analytics.wonDeals}</h1>
+        </div>
+
+        <div style={metriccard}>
+          <h3>Conversion Rate</h3>
+          <h1>
+            {analytics.conversionRate}%
+          </h1>
+        </div>
+      </div>
+
       <p style={{ marginBottom: 20, color: '#666' }}>
         Hot leads are prioritized automatically 🔥
       </p>
@@ -106,6 +198,9 @@ export default function DashboardPage() {
           <option value="hot">Hot</option>
           <option value="qualified">Qualified</option>
           <option value="new">New</option>
+          <option value="appointment">Appointment Set</option>
+          <option value="lost">Lost</option>
+          <option value="won">Won</option>
         </select>
 
         <select
@@ -229,4 +324,11 @@ const buttonStyle = {
   background: '#111',
   color: 'white',
   cursor: 'pointer',
+}
+
+const metriccard = {
+  padding: 20,
+  borderRadius: 8,
+  background: 'white',
+  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
 }
