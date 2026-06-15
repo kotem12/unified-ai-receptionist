@@ -211,6 +211,37 @@ export default function LeadDetailsPage() {
     )
   }
 
+  const timeline = [
+    ...messages.map((m) => ({
+      type: 'message',
+      created_at: m.created_at,
+      text: m.customer_message,
+    })),
+
+    ...appointments.map((a) => ({
+      type: 'appointment',
+      created_at: a.created_at,
+      text: a.status
+    })),
+
+    ...tasks.map(t => ({
+      type: 'task',
+      created_at: t.created_at,
+      text: t.task
+    })),
+
+    ...notes.map(n => ({
+      type: 'note',
+      created_at: n.created_at,
+      text: n.note
+    }))
+  ].sort(
+      (a, b) => 
+        new Date(a.created_at).getTime() 
+        -
+        new Date(b.created_at).getTime()
+    )
+
   return (
     <div style={{ padding: 20 }}>
       <h1>Lead Details</h1>
@@ -280,6 +311,28 @@ export default function LeadDetailsPage() {
           {lead.locations?.join(', ') || '-'}
         </p>
       </div>
+
+      <h2>Activity Timeline</h2>
+
+      {timeline.map((item, index) => (
+        <div 
+          key={index} 
+          style={card}
+        >
+
+          <strong>
+            {item.type.toUpperCase()}
+          </strong>
+
+          <p>{item.text}</p>
+
+          <small>
+            {new Date(
+              item.created_at
+            ).toLocaleString()}
+          </small>
+        </div>
+      ))}
 
       <h2>Conversation History</h2>
 

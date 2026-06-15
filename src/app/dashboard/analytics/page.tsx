@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { getSupabaseBrowser } from '@/lib/supabase-browser'
+import DashboardNav from '@/components/DashboardNav'
 
 export default function AnalyticsPage() {
   const [stats, setStats] = useState({
@@ -155,6 +156,8 @@ export default function AnalyticsPage() {
   return (
     <div style={{ padding: 20 }}>
       <h1>Analytics</h1>
+
+      <DashboardNav />
 
       <div
         style={{

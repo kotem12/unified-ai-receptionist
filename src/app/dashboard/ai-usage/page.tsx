@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { getSupabaseBrowser } from '@/lib/supabase-browser'
+import DashboardNav from '@/components/DashboardNav'
 
 export default function AIUsagePage() {
   const [usage, setUsage] = useState<any[]>([])
@@ -75,6 +76,7 @@ export default function AIUsagePage() {
 
   return (
     <div style={{ padding: 20 }}>
+      <DashboardNav />
       <h1>AI Usage Dashboard</h1>
 
       <div

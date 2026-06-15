@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { getSupabaseBrowser } from '@/lib/supabase-browser'
+import DashboardNav from '@/components/DashboardNav'
 
 export default function PipelinePage() {
   const router = useRouter()
@@ -88,6 +89,8 @@ export default function PipelinePage() {
   return (
     <div style={{ padding: 20 }}>
       <h1>Pipeline</h1>
+
+      <DashboardNav />
 
       <div
         style={{

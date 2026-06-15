@@ -3,10 +3,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { getSupabaseBrowser } from '@/lib/supabase-browser'
+import DashboardNav from '@/components/DashboardNav'
 
 export default function DashboardPage() {
   const router = useRouter()
   const [conversations, setConversations] = useState<any[]>([])
+  const [search, setSearch] = useState('')
+  const [loading, setLoading] = useState(true)
 
   const [stageFilter, setStageFilter] =
     useState<
@@ -35,6 +38,8 @@ export default function DashboardPage() {
   // =========================
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true)
+      
       const supabase = getSupabaseBrowser()
 
       const {
@@ -42,6 +47,7 @@ export default function DashboardPage() {
       } = await supabase.auth.getUser()
 
       if (!user) {
+        setLoading(false)
         router.push('/login')
         return
       }
@@ -53,6 +59,7 @@ export default function DashboardPage() {
         .single()
 
       if (!business) {
+        setLoading(false)
         router.push('/onboarding')
         return
       }
@@ -111,6 +118,7 @@ export default function DashboardPage() {
       console.log('Dashboard error:', error)
 
       setConversations(data || [])
+      setLoading(false)
     }
 
     fetchData()
@@ -122,13 +130,30 @@ export default function DashboardPage() {
         const lead = c.lead_data || {}
 
         const stageMatch =
-          stageFilter === 'all' || lead.stage === stageFilter
+          stageFilter === 'all' || 
+          lead.stage === stageFilter
 
         const intentMatch =
-          intentFilter === 'all' || lead.intent === intentFilter
+          intentFilter === 'all' || 
+          lead.intent === intentFilter
 
-        return stageMatch && intentMatch
+        const searchMatch =
+          !search ||
+          c.customer_phone
+            ?.toLowerCase() 
+            .includes(search.toLowerCase()) ||
+
+          c.customer_message
+            ?.toLowerCase() 
+            .includes(search.toLowerCase())
+
+        return (
+          stageMatch && 
+          intentMatch && 
+          searchMatch
+        )
       })
+
       .sort((a: any, b: any) => {
         const aStage = a.lead_data?.stage
         const bStage = b.lead_data?.stage
@@ -139,11 +164,57 @@ export default function DashboardPage() {
       })
   }, [conversations, stageFilter, intentFilter])
 
+  if (loading) {
+    return (
+      <div style={{ padding: 20 }}>
+        <h1>Loading...</h1>
+      </div>
+    )
+  }
+
+  function exportLeads() {
+    const rows = filtered.map((c: any) => ({
+      phone: c.customer_phone,
+      intent: c.lead_data?.intent || '',
+      stage: c.lead_data?.stage || '',
+      budget: c.lead_data?.budget || '',
+    }))
+
+    if (rows.length === 0) {
+      alert('No leads to export')
+      return
+    }
+
+    const csv = [
+      Object.keys(rows[0]).join(','),
+      ...rows.map((r) =>
+        Object.values(r).join(',')
+      ),
+    ].join('\n')
+
+    const blob = new Blob(
+      [csv],
+      { type: 'text/csv' }
+    )
+
+    const url =
+      URL.createObjectURL(blob)
+
+    const a = 
+      document.createElement('a')
+
+    a.href = url
+    a.download = 'leads.csv'
+    a.click()
+  }
+
   return (
     <div style={{ padding: 20 }}>
       <h1 style={{ fontSize: 28, fontWeight: 'bold' }}>
         AI Receptionist CRM
       </h1>
+
+      <DashboardNav />
 
       <div 
         style={{ 
@@ -183,6 +254,21 @@ export default function DashboardPage() {
           </h1>
         </div>
       </div>
+
+      <input
+        placeholder="Search by phone or message..."
+        value={search}
+        onChange={(e) => 
+          setSearch(e.target.value)
+        }
+        style={{
+          padding: '10px 12px',
+          width: '100%',
+          borderRadius: 6,
+          border: '1px solid #ccc',
+          marginBottom: 20,
+        }}
+      />
 
       <p style={{ marginBottom: 20, color: '#666' }}>
         Hot leads are prioritized automatically 🔥
@@ -237,6 +323,13 @@ export default function DashboardPage() {
           style={buttonStyle}
         >
           Analytics View
+        </button>
+
+        <button
+          onClick={exportLeads}
+          style={buttonStyle}
+        >
+          Export Leads CSV
         </button>
 
         <button

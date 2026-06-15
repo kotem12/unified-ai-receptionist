@@ -96,6 +96,18 @@ Collect: destination, travel date, visa needs, budget
       console.log('⚠️ OpenAI unavailable')
     }
 
+  const { data: latestConversation } =
+    await (supabase as any)
+      .from('conversations')
+      .select('*')
+      .eq('customer_phone', customerPhone)
+      .eq('business_id', business.id)
+      .order('created_at', {
+        ascending: false,
+      })
+      .limit(1)
+      .single()
+
 // =========================
 // AI LAYER
 // =========================
@@ -103,7 +115,27 @@ reply = '' // reset to ensure a clean slate
 
 try {
   if (!openaiClient) {
-    throw new Error('OpenAI client unavailable')
+    throw new Error(
+      'OpenAI client unavailable'
+    )
+  }
+
+  if (latestConversation?.human_takeover) {
+    console.log(
+      'Human takeover active. Skipping AI reply.'
+    )
+
+    const twiml =
+      new twilio.twiml.MessagingResponse()
+
+    return new NextResponse(
+      twiml.toString(),
+      {
+        headers: {
+          'Content-Type': 'text/xml',
+        },
+      }
+    )
   }
 
   const aiResponse = await openaiClient.chat.completions.create({

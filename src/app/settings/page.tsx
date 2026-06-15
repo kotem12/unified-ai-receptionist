@@ -11,6 +11,9 @@ export default function SettingsPage() {
   const [aiTone, setAiTone] = useState('professional')
   const [aiPrompt, setAiPrompt] = useState('')
   const [saving, setSaving] = useState(false)
+  const [welcomeMessage, setWelcomeMessage] = useState('')
+  const [humanEscalationText, setHumanEscalationText] = useState('')
+  const [captureLeads, setCaptureLeads] = useState(true)
 
   useEffect(() => {
     loadBusiness()
@@ -41,6 +44,9 @@ export default function SettingsPage() {
     setWhatsappNumber(data.whatsapp_number || '')
     setAiTone(data.ai_tone || 'professional')
     setAiPrompt(data.ai_prompt || '')
+    setWelcomeMessage(data.welcome_message || '')
+    setHumanEscalationText(data.human_escalation_text || '')
+    setCaptureLeads(data.capture_leads ?? true)
   }
 
   async function saveSettings() {
@@ -56,6 +62,10 @@ export default function SettingsPage() {
         whatsapp_number: whatsappNumber,
         ai_tone: aiTone,
         ai_prompt: aiPrompt,
+
+        welcome_message: welcomeMessage,
+        human_escalation_text: humanEscalationText,
+        capture_leads: captureLeads,
       })
       .eq('id', businessId)
 
@@ -107,6 +117,37 @@ export default function SettingsPage() {
             setAiTone(e.target.value)
           }
         >
+
+        <input 
+          style={input}
+          value={welcomeMessage}
+          onChange={(e) =>
+            setWelcomeMessage(e.target.value)
+          }
+          placeholder="Welcome Message"
+        />
+
+        <input
+          style={input}
+          value={humanEscalationText}
+          onChange={(e) =>
+            setHumanEscalationText(e.target.value)
+          }
+          placeholder="Human Escalation Message"
+        />
+
+        <label>
+          <input
+            type="checkbox"
+            checked={captureLeads}
+            onChange={(e) =>
+              setCaptureLeads(e.target.checked)
+            }
+          />
+
+          Automatically Capture Leads
+        </label>
+        
           <option value="professional">
             Professional
           </option>
