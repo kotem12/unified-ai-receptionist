@@ -1,12 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getOpenAI } from '@/lib/openai'
-import { getGemini } from '@/lib/gemini'
+import { getGroq } from '@/lib/groq'
 import { getSupabase } from '@/lib/supabase'
 import twilio from 'twilio'
 
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData()
+
+    console.log(
+     'NUM MEDIA:',
+      formData.get('NumMedia')
+    )
+
+    console.log(
+      'MEDIA URL:',
+      formData.get('MediaUrl0')
+    )
+
+    console.log(
+      'MEDIA TYPE:',
+      formData.get('MediaContentType0')
+    )
 
     console.log('FROM:', formData.get('From'))
     console.log('TO:', formData.get('To'))
@@ -84,6 +99,39 @@ Collect: destination, travel date, visa needs, budget
     } catch (err) {
       console.log('⚠️ Memory fetch failed, continuing without history')
     }
+    // =========================
+    // KNOWLEDGE BASE LAYER
+    // =========================
+
+    let knowledgeContext = ''
+
+    try {
+
+      const { data: knowledge } =
+        await supabase
+          .from('knowledge_base')
+          .select('*')
+          .eq('business_id', business.id)
+          .limit(20)
+
+      knowledgeContext =
+        knowledge
+          ?.map(
+            (k: any) =>
+              `Title: ${k.title}
+            
+    Category: ${k.category}
+    
+    Content:
+    ${k.content}`
+          )
+          .join('\n\n---\n\n') || ''
+    } catch (err) {
+
+      console.log(
+        'Knowledge base lookup failed'
+      )
+    }
 
     let reply = ''
     let leadData: any = null
@@ -138,23 +186,44 @@ try {
     )
   }
 
-  const aiResponse = await openaiClient.chat.completions.create({
-    model: 'gpt-4o-mini',
-    messages: [
-      { role: 'system', content: systemPrompt },
-      {
-        role: 'system',
-        content:
-          conversationHistory
-            ? `Conversation history:\n${conversationHistory}`
-            : 'No previous conversation history.',
-      },
-      {
-        role: 'user',
-        content: incomingMessage,
-      },
-    ],
-  })
+  const aiResponse: any = await Promise.race([
+    openaiClient.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system',
+           content: systemPrompt,
+        },
+        {
+          role: 'system',
+          content:
+            conversationHistory
+              ? `Conversation history:\n${conversationHistory}`
+              : 'No previous conversation history.',
+        },
+        {
+          role: 'system',
+          content:
+            knowledgeContext
+              ? `Company Knowledge Base:
+      ${knowledgeContext}
+    
+      Use this information whenever relevant.
+      Do not invent answers that contradict it.`
+                : 'No knowledge base available.',
+        },
+        {
+          role: 'user',
+          content: incomingMessage,
+        },
+      ]
+    }),
+    new Promise((_, reject) =>
+      setTimeout(
+        () => reject(new Error('OpenAI timeout')),
+        4000
+      )
+    )
+  ])  
 
   reply =
     aiResponse.choices[0].message.content || ''
@@ -170,48 +239,76 @@ try {
 
 } catch (openAiError) {
 
-  console.log('⚠️ OpenAI failed, trying Gemini')
+  console.log('⚠️ OpenAI failed, trying Groq')
 
   try {
-    const gemini = getGemini()
+    const groq = getGroq()
 
-    const model = gemini.getGenerativeModel({
-      model: 'gemini-1.5-flash',
-    })
-
-    const result = await model.generateContent(`
-${systemPrompt}
-
-Conversation History:
-${conversationHistory}
-
-Customer:
-${incomingMessage}
-`)
+    const aiResponse: any = await Promise.race([
+      groq.chat.completions.create({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          {
+            role: 'system',
+            content: systemPrompt,
+          },
+          {
+            role: 'system',
+            content:
+              conversationHistory
+                ? `Conversation history:\n${conversationHistory}`
+                : 'No previous conversation history.',
+          },
+          {
+            role: 'system',
+            content:
+              knowledgeContext
+                ? `Company Knowldge Base:
+    ${knowledgeContext}
+    
+    Use this information whenever relevant.
+    Do not invent answers that contradict it.`
+                    : 'No knowledge base available.',
+          },
+          {
+            role: 'user',
+            content: incomingMessage,
+          },
+        ],
+      }),
+      new Promise((_, reject) =>
+        setTimeout(
+          () => reject(new Error('Groq timeout')),
+          10000
+        )
+      ),
+    ])
 
     reply =
-      result.response.text() || ''
+      aiResponse.choices?.[0]?.message?.content || ''
 
-    console.log('✅ Gemini fallback used')
+    console.log('✅ Groq fallback used')
 
     await logAIUsage(
       supabase,
       business.id,
-      'gemini',
-      'gemini-1.5-flash',
+      'groq',
+      'llama-3.3-70b-versatile',
       0,
       0
     )
 
-  } catch (geminiError) {
+  } catch (groqError) {
 
-    console.error('❌ Gemini Error:', geminiError)
-
+    console.error(
+      '❌ Groq Error:', 
+      groqError
+    )
   }
 }
 if (!reply) {
 
-  console.log('⚠️ Both OpenAI and Gemini failed, switching to mock AI')
+  console.log('⚠️ Both OpenAI and Groq failed, switching to mock AI')
 
   reply = generateMockAI(incomingMessage)
 
@@ -232,7 +329,7 @@ console.log('FINAL REPLY:', reply)
     // CRM LEAD EXTRACTION
     // =========================
     try {
-      if (openaiClient) {
+      if (openaiClient && process.env.OPENAI_LEAD_EXTRACTION === 'true') {
         const extraction = await openaiClient.chat.completions.create({
           model: 'gpt-4o-mini',
           messages: [

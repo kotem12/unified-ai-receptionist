@@ -61,6 +61,42 @@ export default function DashboardNav() {
       >
         Templates
       </button>
+
+      <button
+        onClick={() =>
+          router.push('/dashboard/calendar')
+        }
+      >
+        Calendar
+      </button>
+
+      <button
+        onClick={() =>
+          router.push('/dashboard/team')
+        }
+      >
+        Team
+      </button>
+
+      <button
+        onClick={() =>
+          router.push(
+            '/dashboard/broadcast'
+          )
+        }
+      >
+        Broadcast
+      </button>
+
+      <button
+        onClick={() =>
+          router.push(
+            '/dashboard/knowledge'
+          )
+        }
+      >
+        Knowledge
+      </button>
     </div>
   )
 }
